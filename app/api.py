@@ -7,6 +7,7 @@ modelo = joblib.load("app/model.joblib")
 
 app = FastAPI()
 
+
 class Paciente(BaseModel):
     Age: int
     Sex: str
@@ -20,12 +21,12 @@ class Paciente(BaseModel):
     Oldpeak: float
     ST_Slope: str
 
+
 @app.post("/predict")
 def predict(paciente: Paciente):
-    datos = pd.DataFrame([paciente.dict()])
+    datos = pd.DataFrame([paciente.model_dump()])
     proba = modelo.predict_proba(datos)[0][1]
     return {
         "heart_disease_probability": float(proba),
         "prediction": int(proba > 0.5)
     }
-
