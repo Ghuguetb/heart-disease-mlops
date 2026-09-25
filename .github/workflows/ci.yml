@@ -21,6 +21,5 @@ jobs:
       - name: Lint
         run: flake8 app/ --max-line-length=100
 
-           - name: Tests
+      - name: Tests
         run: python -m pytest tests/
-        
