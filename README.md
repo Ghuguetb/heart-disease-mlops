@@ -1,12 +1,16 @@
 # Heart Disease MLOps
 
-Proyecto integrador de Machine Learning Operations: un modelo de clasificación que predice el riesgo de enfermedad cardíaca, llevado a través de un ciclo completo de MLOps — desde el análisis exploratorio hasta el despliegue en Kubernetes, integración continua y monitoreo de deriva de datos.
+Tarea 2 del curso de Machine Learning, Maestría en Ingeniería Biomédica, Universidad del Norte.
 
-Dataset: [Heart Failure Prediction Dataset](https://www.kaggle.com/datasets/fedesoriano/heart-failure-prediction) (Kaggle), 918 pacientes, 11 variables clínicas.
+Este proyecto lo hicimos Santiago Díaz, Gina Huguet y Leiry Mares.
+
+Este es un proyecto integrador de Machine Learning Operations. Construimos un modelo de clasificación que predice el riesgo de enfermedad cardíaca y lo llevamos por todo el ciclo de MLOps, desde el análisis exploratorio hasta el despliegue en Kubernetes, pasando por integración continua y monitoreo de deriva de datos.
+
+Usamos el [Heart Failure Prediction Dataset](https://www.kaggle.com/datasets/fedesoriano/heart-failure-prediction) de Kaggle, que tiene 918 pacientes y 11 variables clínicas.
 
 ## Resultados
 
-Comparación de 5 modelos (Pipeline + GridSearchCV, validación cruzada de 5 folds):
+Comparamos 5 modelos usando Pipeline y GridSearchCV, con validación cruzada de 5 folds.
 
 | Modelo | AUC | Accuracy |
 |---|---|---|
@@ -16,11 +20,12 @@ Comparación de 5 modelos (Pipeline + GridSearchCV, validación cruzada de 5 fol
 | SVC | 0.929 | 0.842 |
 | KNN | 0.917 | 0.837 |
 
-Modelo final: **Regresión Logística** (`C=1`), evaluado sobre un conjunto de prueba independiente (184 pacientes, nunca usados en entrenamiento):
-- AUC: 0.931
-- Accuracy: 0.864
-- Sensibilidad: 85.0%
-- Especificidad: 88.3%
+Nos quedamos con la Regresión Logística (`C=1`) como modelo final. La evaluamos sobre un conjunto de prueba independiente, con 184 pacientes que nunca se usaron en el entrenamiento, y estos fueron los resultados.
+
+- AUC de 0.931
+- Accuracy de 0.864
+- Sensibilidad de 85.0%
+- Especificidad de 88.3%
 
 ## Estructura del proyecto
 
@@ -50,11 +55,11 @@ heart-disease-mlops/
 
 ## Cómo correrlo
 
-Requisitos: Python 3.13, Docker Desktop, Minikube, kubectl.
+Para correr esto necesitas Python 3.13, Docker Desktop, Minikube y kubectl.
 
 ### 1. Notebooks (análisis y entrenamiento)
 
-Abrir `notebooks/1_model_leakage_demo.ipynb` y `notebooks/2_model_pipeline_cv.ipynb` en Jupyter o VS Code y ejecutar en orden. El segundo notebook exporta el modelo entrenado a `app/model.joblib`.
+Abre `notebooks/1_model_leakage_demo.ipynb` y `notebooks/2_model_pipeline_cv.ipynb` en Jupyter o VS Code y ejecútalos en orden. El segundo notebook exporta el modelo entrenado a `app/model.joblib`.
 
 ### 2. API localmente (sin Docker)
 
@@ -63,7 +68,7 @@ pip install fastapi uvicorn pydantic joblib pandas scikit-learn
 uvicorn app.api:app --reload
 ```
 
-Probar en `http://127.0.0.1:8000/docs`.
+Puedes probarla en `http://127.0.0.1:8000/docs`.
 
 ### 3. Docker
 
@@ -84,11 +89,11 @@ minikube service heart-service
 
 ### 5. Integración continua
 
-El workflow en `.github/workflows/ci.yml` corre automáticamente en cada `push`: instala dependencias, revisa estilo con `flake8` y ejecuta las pruebas con `pytest`.
+El workflow en `.github/workflows/ci.yml` corre automáticamente en cada `push`. Instala las dependencias, revisa el estilo con `flake8` y ejecuta las pruebas con `pytest`.
 
 ### 6. Monitoreo de data drift
 
-Generado en `notebooks/3_data_drift_monitoring.ipynb`, comparando la distribución de `X_train` (referencia) contra `X_test` (datos "actuales"). Resultado: sin drift significativo a nivel de dataset (1 de 11 columnas con drift individual — `Sex`, explicable por el desbalance natural de esa variable en el dataset original).
+Esto lo hicimos en `notebooks/3_data_drift_monitoring.ipynb`, comparando la distribución de `X_train` como referencia contra `X_test` como si fueran los datos actuales. No encontramos drift significativo a nivel de todo el dataset. Solo una de las 11 columnas mostró drift individual, `Sex`, y esto se explica por el desbalance natural que tiene esa variable en el dataset original.
 
 ## Ejemplo de uso de la API
 
@@ -103,22 +108,22 @@ curl -X POST http://127.0.0.1:8000/predict \
   }'
 ```
 
-Respuesta:
+Esto es lo que devuelve.
 ```json
 {"heart_disease_probability": 0.9597, "prediction": 1}
 ```
 
 ## Notas sobre la implementación
 
-El material de referencia del curso incluye un ejemplo de código de carácter general. Para adaptarlo al dataset específico utilizado en este proyecto, se realizaron los siguientes ajustes:
+El material de referencia del curso trae un ejemplo de código general. Para adaptarlo al dataset que usamos en este proyecto, hicimos varios ajustes.
 
 1. La columna objetivo en este dataset se llama `HeartDisease`.
-2. Al incluir el dataset variables categóricas de texto, se incorporó un `OneHotEncoder` dentro de un `ColumnTransformer`.
-3. Se identificó que `Cholesterol` y `RestingBP` registran valores en `0` que corresponden a datos no disponibles; se manejan como valores faltantes e imputan con la mediana dentro del pipeline.
-4. En la demostración de data leakage, se ajustó el orden de las transformaciones para que la comparación entre el flujo correcto y el flujo con fuga resultara representativa.
-5. Los hiperparámetros de `GridSearchCV` se referencian con el prefijo del paso correspondiente del pipeline (por ejemplo, `clf__C`).
-6. El modelo se guarda en `app/model.joblib`, ruta que coincide con la que utiliza `api.py`.
-7. La API recibe los datos como un objeto estructurado (modelo `Paciente` de Pydantic), con los nombres de columna del dataset.
-8. El despliegue en Kubernetes utiliza la imagen construida localmente (`imagePullPolicy: Never`), cargada con `minikube image load`.
-9. Se añadió la carpeta `tests/` con una prueba de la API, utilizada por el workflow de integración continua.
-10. Se utilizó la versión actual de la librería Evidently (`evidently.Report`, `evidently.presets.DataDriftPreset`), dado que su forma de uso cambió respecto a versiones anteriores.
+2. Como el dataset tiene variables categóricas de texto, incorporamos un `OneHotEncoder` dentro de un `ColumnTransformer`.
+3. Nos dimos cuenta de que `Cholesterol` y `RestingBP` tienen valores en `0` que en realidad corresponden a datos no disponibles, así que los tratamos como valores faltantes y los imputamos con la mediana dentro del pipeline.
+4. En la demostración de data leakage ajustamos el orden de las transformaciones para que la comparación entre el flujo correcto y el flujo con fuga fuera representativa.
+5. Los hiperparámetros de `GridSearchCV` los referenciamos con el prefijo del paso correspondiente del pipeline, por ejemplo `clf__C`.
+6. El modelo se guarda en `app/model.joblib`, que es la misma ruta que usa `api.py`.
+7. La API recibe los datos como un objeto estructurado, el modelo `Paciente` de Pydantic, con los nombres de columna del dataset.
+8. El despliegue en Kubernetes usa la imagen construida localmente (`imagePullPolicy: Never`), cargada con `minikube image load`.
+9. Añadimos la carpeta `tests/` con una prueba de la API, que usa el workflow de integración continua.
+10. Usamos la versión actual de la librería Evidently (`evidently.Report`, `evidently.presets.DataDriftPreset`), porque su forma de uso cambió respecto a versiones anteriores.

@@ -1,0 +1,10 @@
+format: jb-book
+root: 00_intro
+chapters:
+  - file: 01_exploracion_y_leakage
+  - file: 02_pipeline_y_evaluacion
+  - file: 03_api_y_docker
+  - file: 04_kubernetes
+  - file: 05_integracion_continua
+  - file: 06_monitoreo
+  - file: 07_conclusiones
